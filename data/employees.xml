@@ -51,4 +51,21 @@
             </address>
         </addresses>
     </employee>
+    <employee>
+        <name>manar</name>
+        <email>manar.ahmed.abdelaziz@gmail.com</email>
+        <phones>
+            <phone Type="mobile">01284231954</phone>
+            <phone Type="">01112543726</phone>
+        </phones>
+        <addresses>
+            <address>
+                <Street>sidi beshr</Street>
+                <BuildingNumber>44</BuildingNumber>
+                <Region>Alexandria</Region>
+                <City>Alexandria</City>
+                <Country>Egypt</Country>
+            </address>
+        </addresses>
+    </employee>
 </employees>

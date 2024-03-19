@@ -53,19 +53,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    function updateEmployee($name, $email, $phones, $addresses){
+        global $xml;
+        $root = initDOM();
+        $employees = $root->getElementsByTagName('employee');
+        $allEmployees = [];
+        foreach ($employees as $employee) {
+            $empDetails = [];
+            foreach ($employee->childNodes as $node) {
+                if ($node->nodeType === XML_ELEMENT_NODE) {
+                    if ($node->nodeName === 'phones') {
+                        $phonesArray = [];
+                        foreach ($node->childNodes as $phoneNode) {
+                            if ($phoneNode->nodeType === XML_ELEMENT_NODE && $phoneNode->nodeName === 'phone') {
+                                $phoneDetails = [
+                                    'number' => $phoneNode->nodeValue,
+                                    'type' => $phoneNode->getAttribute('Type')
+                                ];
+                                $phonesArray[] = $phoneDetails;
+                            }
+                        }
+                        $empDetails['phones'] = $phonesArray;
+                    }
+                    elseif ($node->nodeName === 'addresses') {
+                        $addressesArray = [];
+                        foreach ($node->childNodes as $addressNode) {
+                            if ($addressNode->nodeType === XML_ELEMENT_NODE && $addressNode->nodeName === 'address') {
+                                $addressDetails = [
+                                    'street' => $addressNode->getElementsByTagName('Street')[0]->nodeValue,
+                                    'building' => $addressNode->getElementsByTagName('BuildingNumber')[0]->nodeValue,
+                                    'region' => $addressNode->getElementsByTagName('Region')[0]->nodeValue,
+                                    'city' => $addressNode->getElementsByTagName('City')[0]->nodeValue,
+                                    'country' => $addressNode->getElementsByTagName('Country')[0]->nodeValue
+                                ];
+                                $addressesArray[] = $addressDetails;
+                            }
+                        }
+                        $empDetails['addresses'] = $addressesArray;
+                    }
+                    else {
+                        $empDetails[$node->nodeName] = $node->nodeValue;
+                    }
+                }
+            }
+            
+            $allEmployees[] = $empDetails;
+        }
+        return $allEmployees;
+    }
+    
+
 }
 
 $disableButton = false;
 $disablePrevButton = false;
 
-function nextRecord(){
-    global $currentEmp;
-    global $disableButton;
-    if (!isset ($_SESSION['i'])) {
-        $_SESSION['i'] = 0;
-    }
-    // echo 'session counter->' . $_SESSION['i'];
-
+function getAllEmps(){
     $root = initDOM();
     $employees = $root->getElementsByTagName('employee');
     $allEmployees = [];
@@ -87,7 +130,7 @@ function nextRecord(){
                     }
                     $empDetails['phones'] = $phones;
                 }
-                else if ($node->nodeName === 'addresses') {
+                elseif ($node->nodeName === 'addresses') {
                     $addresses = [];
                     foreach ($node->childNodes as $addressNode) {
                         if ($addressNode->nodeType === XML_ELEMENT_NODE && $addressNode->nodeName === 'address') {
@@ -111,6 +154,18 @@ function nextRecord(){
         
         $allEmployees[] = $empDetails;
     }
+
+    return $allEmployees;
+}
+
+function nextRecord(){
+    global $currentEmp;
+    global $disableButton;
+    if (!isset ($_SESSION['i'])) {
+        $_SESSION['i'] = 0;
+    }
+
+    $allEmployees = getAllEmps();
 
     $array_size = count($allEmployees);
 
@@ -123,10 +178,6 @@ function nextRecord(){
             $_SESSION['i'] = 2;
             $disableButton = true;
         }
-        // print_r($currentEmp);
-        // echo $currentEmp['addresses'][0]['street'];
-        // echo $currentEmp['addresses'][0]['city'];
-        // echo $currentEmp['addresses'][0]['region'];
         return $currentEmp;
     } else {
         return null;
@@ -139,51 +190,7 @@ function prevRecord() {
         $_SESSION['i'] = 0;
     }
 
-    $root = initDOM();
-    $employees = $root->getElementsByTagName('employee');
-    $allEmployees = [];
-
-    foreach ($employees as $employee) {
-        $empDetails = [];
-        foreach ($employee->childNodes as $node) {
-            if ($node->nodeType === XML_ELEMENT_NODE) {
-                if ($node->nodeName === 'phones') {
-                    $phones = [];
-                    foreach ($node->childNodes as $phoneNode) {
-                        if ($phoneNode->nodeType === XML_ELEMENT_NODE && $phoneNode->nodeName === 'phone') {
-                            $phoneDetails = [
-                                'number' => $phoneNode->nodeValue,
-                                'type' => $phoneNode->getAttribute('Type')
-                            ];
-                            $phones[] = $phoneDetails;
-                        }
-                    }
-                    $empDetails['phones'] = $phones;
-                }
-                else if ($node->nodeName === 'addresses') {
-                    $addresses = [];
-                    foreach ($node->childNodes as $addressNode) {
-                        if ($addressNode->nodeType === XML_ELEMENT_NODE && $addressNode->nodeName === 'address') {
-                            $addressDetails = [
-                                'street' => $addressNode->getElementsByTagName('Street')[0]->nodeValue,
-                                'building' => $addressNode->getElementsByTagName('BuildingNumber')[0]->nodeValue,
-                                'region' => $addressNode->getElementsByTagName('Region')[0]->nodeValue,
-                                'city' => $addressNode->getElementsByTagName('City')[0]->nodeValue,
-                                'country' => $addressNode->getElementsByTagName('Country')[0]->nodeValue
-                            ];
-                            $addresses[] = $addressDetails;
-                        }
-                    }
-                    $empDetails['addresses'] = $addresses;
-                }
-                else {
-                    $empDetails[$node->nodeName] = $node->nodeValue;
-                }
-            }
-        }
-        
-        $allEmployees[] = $empDetails;
-    }
+    $allEmployees = getAllEmps();
 
     $array_size = count($allEmployees);
 
@@ -218,13 +225,11 @@ if (isset ($_POST['insert'])) {
     }
     insertEmp($name, $email, $phones, $addresses);
 } elseif (isset ($_POST['prev'])) {
-    // header('Location: pages/displayeEmp.php');
-    // exit;
     prevRecord();
 } elseif (isset ($_POST['next'])) {
-    // header('Location: pages/displayeEmp.php');
-    // exit;
     nextRecord();
+}elseif(isset ($_POST['update'])){
+
 }
 ?>
 
@@ -333,7 +338,7 @@ if (isset ($_POST['insert'])) {
             </div>
 
             <div class="col-12 text-center mt-5 mb-3">
-                <button type="submit" name="prev" class="btn btn-dark me-3" <?php echo $disablePrevButton? 'disabled': '' ?> >
+                <button type="submit" name="prev" class="btn btn-outline-dark me-3" <?php echo $disablePrevButton? 'disabled': '' ?> >
                     Prev
                 </button>
                 <button type="submit" name="insert" class="btn btn-success me-3">
@@ -346,7 +351,7 @@ if (isset ($_POST['insert'])) {
                 <button type="submit" name="delete" class="btn btn-danger me-3">
                     Delete
                 </button>
-                <button type="submit" name="next" class="btn btn-dark me-3" <?php echo $disableButton? 'disabled': '' ?>>
+                <button type="submit" name="next" class="btn btn-outline-dark me-3" <?php echo $disableButton? 'disabled': '' ?>>
                     Next
                 </button>
             </div>

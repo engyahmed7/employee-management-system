@@ -55,6 +55,152 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 }
 
+$disableButton = false;
+$disablePrevButton = false;
+
+function nextRecord(){
+    global $currentEmp;
+    global $disableButton;
+    if (!isset ($_SESSION['i'])) {
+        $_SESSION['i'] = 0;
+    }
+    // echo 'session counter->' . $_SESSION['i'];
+
+    $root = initDOM();
+    $employees = $root->getElementsByTagName('employee');
+    $allEmployees = [];
+
+    foreach ($employees as $employee) {
+        $empDetails = [];
+        foreach ($employee->childNodes as $node) {
+            if ($node->nodeType === XML_ELEMENT_NODE) {
+                if ($node->nodeName === 'phones') {
+                    $phones = [];
+                    foreach ($node->childNodes as $phoneNode) {
+                        if ($phoneNode->nodeType === XML_ELEMENT_NODE && $phoneNode->nodeName === 'phone') {
+                            $phoneDetails = [
+                                'number' => $phoneNode->nodeValue,
+                                'type' => $phoneNode->getAttribute('Type')
+                            ];
+                            $phones[] = $phoneDetails;
+                        }
+                    }
+                    $empDetails['phones'] = $phones;
+                }
+                else if ($node->nodeName === 'addresses') {
+                    $addresses = [];
+                    foreach ($node->childNodes as $addressNode) {
+                        if ($addressNode->nodeType === XML_ELEMENT_NODE && $addressNode->nodeName === 'address') {
+                            $addressDetails = [
+                                'street' => $addressNode->getElementsByTagName('Street')[0]->nodeValue,
+                                'building' => $addressNode->getElementsByTagName('BuildingNumber')[0]->nodeValue,
+                                'region' => $addressNode->getElementsByTagName('Region')[0]->nodeValue,
+                                'city' => $addressNode->getElementsByTagName('City')[0]->nodeValue,
+                                'country' => $addressNode->getElementsByTagName('Country')[0]->nodeValue
+                            ];
+                            $addresses[] = $addressDetails;
+                        }
+                    }
+                    $empDetails['addresses'] = $addresses;
+                }
+                else {
+                    $empDetails[$node->nodeName] = $node->nodeValue;
+                }
+            }
+        }
+        
+        $allEmployees[] = $empDetails;
+    }
+
+    $array_size = count($allEmployees);
+
+    if ($array_size > 0 && $_SESSION['i'] < $array_size) {
+        $i = $_SESSION['i'];
+        $i = ($i >= $array_size) ? 0 : $i;
+        $currentEmp = $allEmployees[$i];
+        $_SESSION['i']++;
+        if ($_SESSION['i'] >= $array_size) {
+            $_SESSION['i'] = 2;
+            $disableButton = true;
+        }
+        // print_r($currentEmp);
+        // echo $currentEmp['addresses'][0]['street'];
+        // echo $currentEmp['addresses'][0]['city'];
+        // echo $currentEmp['addresses'][0]['region'];
+        return $currentEmp;
+    } else {
+        return null;
+    }
+}
+
+function prevRecord() {
+    global $disablePrevButton, $currentEmp;
+    if (!isset($_SESSION['i'])) {
+        $_SESSION['i'] = 0;
+    }
+
+    $root = initDOM();
+    $employees = $root->getElementsByTagName('employee');
+    $allEmployees = [];
+
+    foreach ($employees as $employee) {
+        $empDetails = [];
+        foreach ($employee->childNodes as $node) {
+            if ($node->nodeType === XML_ELEMENT_NODE) {
+                if ($node->nodeName === 'phones') {
+                    $phones = [];
+                    foreach ($node->childNodes as $phoneNode) {
+                        if ($phoneNode->nodeType === XML_ELEMENT_NODE && $phoneNode->nodeName === 'phone') {
+                            $phoneDetails = [
+                                'number' => $phoneNode->nodeValue,
+                                'type' => $phoneNode->getAttribute('Type')
+                            ];
+                            $phones[] = $phoneDetails;
+                        }
+                    }
+                    $empDetails['phones'] = $phones;
+                }
+                else if ($node->nodeName === 'addresses') {
+                    $addresses = [];
+                    foreach ($node->childNodes as $addressNode) {
+                        if ($addressNode->nodeType === XML_ELEMENT_NODE && $addressNode->nodeName === 'address') {
+                            $addressDetails = [
+                                'street' => $addressNode->getElementsByTagName('Street')[0]->nodeValue,
+                                'building' => $addressNode->getElementsByTagName('BuildingNumber')[0]->nodeValue,
+                                'region' => $addressNode->getElementsByTagName('Region')[0]->nodeValue,
+                                'city' => $addressNode->getElementsByTagName('City')[0]->nodeValue,
+                                'country' => $addressNode->getElementsByTagName('Country')[0]->nodeValue
+                            ];
+                            $addresses[] = $addressDetails;
+                        }
+                    }
+                    $empDetails['addresses'] = $addresses;
+                }
+                else {
+                    $empDetails[$node->nodeName] = $node->nodeValue;
+                }
+            }
+        }
+        
+        $allEmployees[] = $empDetails;
+    }
+
+    $array_size = count($allEmployees);
+
+    if ($array_size > 0 && $_SESSION['i'] > 0) {
+        $_SESSION['i']--; 
+        $i = $_SESSION['i'];
+        $currentEmp = $allEmployees[$i];
+        return $currentEmp;
+    } else {
+        $disablePrevButton = true;
+        return null;
+    }
+}
+
+
+
+
 function checkEmpty($name, $email, $phones, $addresses)
 {
     if (empty ($name) || empty ($email) || empty ($phones) || empty ($addresses)) {
@@ -64,12 +210,21 @@ function checkEmpty($name, $email, $phones, $addresses)
     return false;
 }
 
+
 if (isset ($_POST['insert'])) {
     if (checkEmpty($name, $email, $phones, $addresses)) {
         header('Location: index.php');
         exit;
     }
     insertEmp($name, $email, $phones, $addresses);
+} elseif (isset ($_POST['prev'])) {
+    // header('Location: pages/displayeEmp.php');
+    // exit;
+    prevRecord();
+} elseif (isset ($_POST['next'])) {
+    // header('Location: pages/displayeEmp.php');
+    // exit;
+    nextRecord();
 }
 ?>
 
@@ -118,27 +273,30 @@ if (isset ($_POST['insert'])) {
             <!-- name -->
             <div class="col-md-12">
                 <label for="inputName4" class="form-label">Name</label>
-                <input type="text" class="form-control" name="name" id="inputName4" placeholder="name" />
+                <input type="text" class="form-control" name="name" value="<?= isset($currentEmp['name'])?$currentEmp['name']:'' ?>" id="inputName4" placeholder="name" />
             </div>
             <!-- phone -->
             <div class="row mt-3">
                 <label for="inputPhone" class="form-label">Phone</label>
                 <div class="col-md-6">
-                    <input type="text" class="form-control" name="phones[0][number]" placeholder="Phone Number" />
+                    <input type="text" class="form-control" value="<?= isset($currentEmp['phones'][0]['number'])?$currentEmp['phones'][0]['number']:'' ?>" name="phones[0][number]" placeholder="Phone Number" />
                     <select class="form-select mt-2" name="phones[0][type]">
-                        <option value="home">Home</option>
-                        <option value="work">Work</option>
-                        <option value="mobile">Mobile</option>
+                        <option value="home" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'home') ? 'selected' : ''; ?>>Home</option>
+                        <option value="work" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'work') ? 'selected' : ''; ?>>Work</option>
+                        <option value="mobile" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'mobile') ? 'selected' : ''; ?>>Mobile</option>
                     </select>
+
                 </div>
 
                 <div class="col-md-6">
-                    <input type="text" class="form-control" name="phones[1][number]" placeholder="Phone Number" />
-                    <select class="form-select mt-2" name="phones[1][type]">
-                        <option value="home">Home</option>
-                        <option value="work">Work</option>
-                        <option value="mobile">Mobile</option>
+                    <input type="text" class="form-control" value="<?= isset($currentEmp['phones'][0]['number'])?$currentEmp['phones'][1]['number']:'' ?>" name="phones[1][number]" placeholder="Phone Number" />
+                    <select class="form-select mt-2" name="phones[0][type]">
+                        <option value="home" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'home') ? 'selected' : ''; ?>>Home</option>
+                        <option value="work" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'work') ? 'selected' : ''; ?>>Work</option>
+                        <option value="mobile" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'mobile') ? 'selected' : ''; ?>>Mobile</option>
                     </select>
+
+
                 </div>
             </div>
 
@@ -146,44 +304,50 @@ if (isset ($_POST['insert'])) {
             <!-- email -->
             <div class="col-md-12 mt-3">
                 <label for="inputEmail4" class="form-label">Email</label>
-                <input type="email" class="form-control" name="email" id="inputEmail4" placeholder="email" />
+                <input type="email" class="form-control" name="email" value="<?= isset($currentEmp['email'])?$currentEmp['email']:'' ?>"  id="inputEmail4" placeholder="email" />
             </div>
 
             <!-- address -->
             <div class="row mt-4">
                 <label for="inputAddress" class="form-label">Address</label>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" name="address[0][street]" id="inputAddress"
+                    <input type="text" class="form-control" value="<?= isset($currentEmp['addresses'][0]['street'])?$currentEmp['addresses'][0]['street']:'' ?>" name="address[0][street]" id="inputAddress"
                         placeholder="Street" />
                 </div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" name="address[0][building]" id="inputAddress2"
+                    <input type="text" class="form-control" value="<?= isset($currentEmp['addresses'][0]['building'])?$currentEmp['addresses'][0]['building']:'' ?>" name="address[0][building]" id="inputAddress2"
                         placeholder="Building Number" />
                 </div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" name="address[0][region]" id="inputAddress3"
+                    <input type="text" class="form-control" value="<?= isset($currentEmp['addresses'][0]['region'])?$currentEmp['addresses'][0]['region']:'' ?>"  name="address[0][region]" id="inputAddress3"
                         placeholder="Region" />
                 </div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" name="address[0][city]" id="inputAddress4"
+                    <input type="text" class="form-control" value="<?= isset($currentEmp['addresses'][0]['city'])?$currentEmp['addresses'][0]['city']:'' ?>" name="address[0][city]" id="inputAddress4"
                         placeholder="City" />
                 </div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" name="address[0][country]" id="inputAddress5"
+                    <input type="text" class="form-control" value="<?= isset($currentEmp['addresses'][0]['country'])?$currentEmp['addresses'][0]['country']:'' ?>" name="address[0][country]" id="inputAddress5"
                         placeholder="Country" />
                 </div>
             </div>
 
             <div class="col-12 text-center mt-5 mb-3">
-                <button type="submit" name="insert" class="btn btn-primary me-3">
+                <button type="submit" name="prev" class="btn btn-dark me-3" <?php echo $disablePrevButton? 'disabled': '' ?> >
+                    Prev
+                </button>
+                <button type="submit" name="insert" class="btn btn-success me-3">
                     Insert
                 </button>
 
-                <button type="submit" name="update" class="btn btn-primary me-3">
+                <button type="submit" name="update" class="btn btn-warning me-3">
                     Update
                 </button>
-                <button type="submit" name="delete" class="btn btn-primary me-3">
+                <button type="submit" name="delete" class="btn btn-danger me-3">
                     Delete
+                </button>
+                <button type="submit" name="next" class="btn btn-dark me-3" <?php echo $disableButton? 'disabled': '' ?>>
+                    Next
                 </button>
             </div>
         </form>

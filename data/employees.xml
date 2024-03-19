@@ -1,6 +1,22 @@
-<?xml version="1.0"?>
+<?xml version="1.0" ?>
 <employees>
-
+    <employee>
+        <name>new person</name>
+        <email>engy.ahmed.abdelaziz@gmail.com</email>
+        <phones>
+            <phone Type="home">01114621092</phone>
+            <phone Type="">034833898</phone>
+        </phones>
+        <addresses>
+            <address>
+                <Street>sidi beshr</Street>
+                <BuildingNumber />
+                <Region>Alexandria</Region>
+                <City>Alexandria</City>
+                <Country>Egypt</Country>
+            </address>
+        </addresses>
+    </employee>
     <employee>
         <name>Engy Ahmed Abdelaziz</name>
         <email>engya306@gmail.com</email>
@@ -18,4 +34,21 @@
             </address>
         </addresses>
     </employee>
-<employee><name>Mazen Ahmed</name><email>mazen@gmail.com</email><phones><phone Type="mobile">01284231954</phone><phone Type="work">01112563257</phone></phones><addresses><address><Street>smouha</Street><BuildingNumber>3</BuildingNumber><Region>Alexandria</Region><City>Alexandria</City><Country>Egypt</Country></address></addresses></employee></employees>
+    <employee>
+        <name>Mazen Ahmed</name>
+        <email>mazen@gmail.com</email>
+        <phones>
+            <phone Type="mobile">01284231954</phone>
+            <phone Type="work">01112563257</phone>
+        </phones>
+        <addresses>
+            <address>
+                <Street>smouha</Street>
+                <BuildingNumber>3</BuildingNumber>
+                <Region>Alexandria</Region>
+                <City>Alexandria</City>
+                <Country>Egypt</Country>
+            </address>
+        </addresses>
+    </employee>
+</employees>

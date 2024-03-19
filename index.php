@@ -1,12 +1,15 @@
 <?php
 session_start();
 
+$currentEmp = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = isset ($_POST['name']) ? $_POST['name'] : '';
     $email = isset ($_POST['email']) ? $_POST['email'] : '';
-    $phones = isset ($_POST['phones']) ? $_POST['phones'] : '';
-    $addresses = isset ($_POST['address']) ? $_POST['address'] : '';
+    $phones = isset ($_POST['phones']) ? $_POST['phones'] : [];
+    $addresses = isset ($_POST['address']) ? $_POST['address'] : [];
+
+    $oldname = isset ($_POST['oldname']) ? $_POST['oldname'] : '';
 
     function initDOM()
     {
@@ -53,62 +56,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    function updateEmployee($name, $email, $phones, $addresses){
-        global $xml;
-        $root = initDOM();
-        $employees = $root->getElementsByTagName('employee');
-        $allEmployees = [];
-        foreach ($employees as $employee) {
-            $empDetails = [];
-            foreach ($employee->childNodes as $node) {
-                if ($node->nodeType === XML_ELEMENT_NODE) {
-                    if ($node->nodeName === 'phones') {
-                        $phonesArray = [];
-                        foreach ($node->childNodes as $phoneNode) {
-                            if ($phoneNode->nodeType === XML_ELEMENT_NODE && $phoneNode->nodeName === 'phone') {
-                                $phoneDetails = [
-                                    'number' => $phoneNode->nodeValue,
-                                    'type' => $phoneNode->getAttribute('Type')
-                                ];
-                                $phonesArray[] = $phoneDetails;
-                            }
-                        }
-                        $empDetails['phones'] = $phonesArray;
-                    }
-                    elseif ($node->nodeName === 'addresses') {
-                        $addressesArray = [];
-                        foreach ($node->childNodes as $addressNode) {
-                            if ($addressNode->nodeType === XML_ELEMENT_NODE && $addressNode->nodeName === 'address') {
-                                $addressDetails = [
-                                    'street' => $addressNode->getElementsByTagName('Street')[0]->nodeValue,
-                                    'building' => $addressNode->getElementsByTagName('BuildingNumber')[0]->nodeValue,
-                                    'region' => $addressNode->getElementsByTagName('Region')[0]->nodeValue,
-                                    'city' => $addressNode->getElementsByTagName('City')[0]->nodeValue,
-                                    'country' => $addressNode->getElementsByTagName('Country')[0]->nodeValue
-                                ];
-                                $addressesArray[] = $addressDetails;
-                            }
-                        }
-                        $empDetails['addresses'] = $addressesArray;
-                    }
-                    else {
-                        $empDetails[$node->nodeName] = $node->nodeValue;
-                    }
-                }
-            }
-            
-            $allEmployees[] = $empDetails;
-        }
-        return $allEmployees;
-    }
-    
-
 }
 
 $disableButton = false;
 $disablePrevButton = false;
 
-function getAllEmps(){
+
+
+function getAllEmps()
+{
     $root = initDOM();
     $employees = $root->getElementsByTagName('employee');
     $allEmployees = [];
@@ -129,8 +85,7 @@ function getAllEmps(){
                         }
                     }
                     $empDetails['phones'] = $phones;
-                }
-                elseif ($node->nodeName === 'addresses') {
+                } elseif ($node->nodeName === 'addresses') {
                     $addresses = [];
                     foreach ($node->childNodes as $addressNode) {
                         if ($addressNode->nodeType === XML_ELEMENT_NODE && $addressNode->nodeName === 'address') {
@@ -145,20 +100,20 @@ function getAllEmps(){
                         }
                     }
                     $empDetails['addresses'] = $addresses;
-                }
-                else {
+                } else {
                     $empDetails[$node->nodeName] = $node->nodeValue;
                 }
             }
         }
-        
+
         $allEmployees[] = $empDetails;
     }
 
     return $allEmployees;
 }
 
-function nextRecord(){
+function nextRecord()
+{
     global $currentEmp;
     global $disableButton;
     if (!isset ($_SESSION['i'])) {
@@ -184,9 +139,10 @@ function nextRecord(){
     }
 }
 
-function prevRecord() {
+function prevRecord()
+{
     global $disablePrevButton, $currentEmp;
-    if (!isset($_SESSION['i'])) {
+    if (!isset ($_SESSION['i'])) {
         $_SESSION['i'] = 0;
     }
 
@@ -195,14 +151,88 @@ function prevRecord() {
     $array_size = count($allEmployees);
 
     if ($array_size > 0 && $_SESSION['i'] > 0) {
-        $_SESSION['i']--; 
         $i = $_SESSION['i'];
+        $_SESSION['i']--;
         $currentEmp = $allEmployees[$i];
         return $currentEmp;
     } else {
         $disablePrevButton = true;
         return null;
     }
+}
+
+function updateEmployee($oldname, $name, $email, $phones, $addresses)
+{
+    $xml = new DOMDocument("1.0", "UTF-8");
+    $xml->load('data/employees.xml');
+    $root = $xml->documentElement;
+
+    $allEmployees = getAllEmps();
+    $indexToUpdate = -1;
+    foreach ($allEmployees as $index => $employee) {
+        if ($employee['name'] === $oldname) {
+            $indexToUpdate = $index;
+            break;
+        }
+    }
+
+    if ($indexToUpdate !== -1) {
+
+        $allEmployees[$indexToUpdate]['name'] = $name;
+        $allEmployees[$indexToUpdate]['email'] = $email;
+        foreach ($allEmployees[$indexToUpdate]['phones'] as $index => $phone) {
+            if (isset($phones[$index])) {
+                $allEmployees[$indexToUpdate]['phones'][$index]['number'] = $phones[$index]['number'];
+                $allEmployees[$indexToUpdate]['phones'][$index]['type'] = $phones[$index]['type'];
+            }
+        }
+        foreach ($allEmployees[$indexToUpdate]['addresses'] as $index => $address) {
+            if (isset($addresses[$index])) {
+                $allEmployees[$indexToUpdate]['addresses'][$index]['street'] = $addresses[$index]['street'];
+                $allEmployees[$indexToUpdate]['addresses'][$index]['building'] = $addresses[$index]['building'];
+                $allEmployees[$indexToUpdate]['addresses'][$index]['region'] = $addresses[$index]['region'];
+                $allEmployees[$indexToUpdate]['addresses'][$index]['city'] = $addresses[$index]['city'];
+                $allEmployees[$indexToUpdate]['addresses'][$index]['country'] = $addresses[$index]['country'];
+            }
+        }
+    }
+
+    $newXml = new DOMDocument("1.0", "UTF-8");
+    $newXml->appendChild($newXml->createElement("employees"));
+
+    foreach ($allEmployees as $employee) {
+        $employeeElement = $newXml->createElement("employee");
+        $employeeElement->appendChild($newXml->createElement("name", $employee['name']));
+        $employeeElement->appendChild($newXml->createElement("email", $employee['email']));
+
+        $phonesElement = $newXml->createElement("phones");
+        foreach ($employee['phones'] as $phone) {
+            $phoneElement = $newXml->createElement("phone", $phone['number']);
+            $phoneElement->setAttribute("Type", $phone['type']);
+            $phonesElement->appendChild($phoneElement);
+        }
+        $employeeElement->appendChild($phonesElement);
+
+        $addressesElement = $newXml->createElement("addresses");
+        foreach ($employee['addresses'] as $address) {
+            $addressElement = $newXml->createElement("address");
+            $addressElement->appendChild($newXml->createElement("Street", $address['street']));
+            $addressElement->appendChild($newXml->createElement("BuildingNumber", $address['building']));
+            $addressElement->appendChild($newXml->createElement("Region", $address['region']));
+            $addressElement->appendChild($newXml->createElement("City", $address['city']));
+            $addressElement->appendChild($newXml->createElement("Country", $address['country']));
+            $addressesElement->appendChild($addressElement);
+        }
+        $employeeElement->appendChild($addressesElement);
+
+        $newXml->documentElement->appendChild($employeeElement);
+    }
+
+    // Save the updated data to the XML file
+    $newXml->save('data/employees.xml');
+    $_SESSION['success'] = 'Employee updated successfully';
+    header('Location: index.php');
+    exit;
 }
 
 
@@ -228,8 +258,21 @@ if (isset ($_POST['insert'])) {
     prevRecord();
 } elseif (isset ($_POST['next'])) {
     nextRecord();
-}elseif(isset ($_POST['update'])){
-
+} elseif (isset ($_POST['update'])) {
+    // if (!empty($currentEmp)) {
+    if (checkEmpty($name, $email, $phones, $addresses)) {
+        header('Location: index.php');
+        exit;
+    }
+    updateEmployee($oldname, $name, $email, $phones, $addresses);
+    // } 
+    // else {
+    //     $_SESSION['error'] = 'No employee selected for update';
+    //     header('Location: index.php');
+    //     exit;
+    // }
+} elseif (isset ($_POST['delete'])) {
+    // deleteEmployee($currentEmp['name']);
 }
 ?>
 
@@ -275,30 +318,38 @@ if (isset ($_POST['insert'])) {
 
         <h1 class="display-4 mb-5 text-center">Employees</h1>
         <form class="row g-3" method="post">
+            <input type="hidden" name="oldname"
+                value="<?= isset ($currentEmp['name']) ? htmlspecialchars($currentEmp['name']) : '' ?>">
             <!-- name -->
             <div class="col-md-12">
                 <label for="inputName4" class="form-label">Name</label>
-                <input type="text" class="form-control" name="name" value="<?= isset($currentEmp['name'])?$currentEmp['name']:'' ?>" id="inputName4" placeholder="name" />
+                <input type="text" class="form-control" name="name"
+                    value="<?= isset ($currentEmp['name']) ? $currentEmp['name'] : '' ?>" id="inputName4"
+                    placeholder="name" />
             </div>
             <!-- phone -->
             <div class="row mt-3">
                 <label for="inputPhone" class="form-label">Phone</label>
                 <div class="col-md-6">
-                    <input type="text" class="form-control" value="<?= isset($currentEmp['phones'][0]['number'])?$currentEmp['phones'][0]['number']:'' ?>" name="phones[0][number]" placeholder="Phone Number" />
+                    <input type="text" class="form-control"
+                        value="<?= isset ($currentEmp['phones'][0]['number']) ? $currentEmp['phones'][0]['number'] : '' ?>"
+                        name="phones[0][number]" placeholder="Phone Number" />
                     <select class="form-select mt-2" name="phones[0][type]">
-                        <option value="home" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'home') ? 'selected' : ''; ?>>Home</option>
-                        <option value="work" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'work') ? 'selected' : ''; ?>>Work</option>
-                        <option value="mobile" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'mobile') ? 'selected' : ''; ?>>Mobile</option>
+                        <option value="home" <?php echo (isset ($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'home') ? 'selected' : ''; ?>>Home</option>
+                        <option value="work" <?php echo (isset ($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'work') ? 'selected' : ''; ?>>Work</option>
+                        <option value="mobile" <?php echo (isset ($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'mobile') ? 'selected' : ''; ?>>Mobile</option>
                     </select>
 
                 </div>
 
                 <div class="col-md-6">
-                    <input type="text" class="form-control" value="<?= isset($currentEmp['phones'][0]['number'])?$currentEmp['phones'][1]['number']:'' ?>" name="phones[1][number]" placeholder="Phone Number" />
-                    <select class="form-select mt-2" name="phones[0][type]">
-                        <option value="home" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'home') ? 'selected' : ''; ?>>Home</option>
-                        <option value="work" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'work') ? 'selected' : ''; ?>>Work</option>
-                        <option value="mobile" <?php echo (isset($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'mobile') ? 'selected' : ''; ?>>Mobile</option>
+                    <input type="text" class="form-control"
+                        value="<?= isset ($currentEmp['phones'][0]['number']) ? $currentEmp['phones'][1]['number'] : '' ?>"
+                        name="phones[1][number]" placeholder="Phone Number" />
+                    <select class="form-select mt-2" name="phones[1][type]">
+                        <option value="home" <?php echo (isset ($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'home') ? 'selected' : ''; ?>>Home</option>
+                        <option value="work" <?php echo (isset ($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'work') ? 'selected' : ''; ?>>Work</option>
+                        <option value="mobile" <?php echo (isset ($currentEmp['phones'][1]['type']) && $currentEmp['phones'][1]['type'] === 'mobile') ? 'selected' : ''; ?>>Mobile</option>
                     </select>
 
 
@@ -309,36 +360,43 @@ if (isset ($_POST['insert'])) {
             <!-- email -->
             <div class="col-md-12 mt-3">
                 <label for="inputEmail4" class="form-label">Email</label>
-                <input type="email" class="form-control" name="email" value="<?= isset($currentEmp['email'])?$currentEmp['email']:'' ?>"  id="inputEmail4" placeholder="email" />
+                <input type="email" class="form-control" name="email"
+                    value="<?= isset ($currentEmp['email']) ? $currentEmp['email'] : '' ?>" id="inputEmail4"
+                    placeholder="email" />
             </div>
 
             <!-- address -->
             <div class="row mt-4">
                 <label for="inputAddress" class="form-label">Address</label>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" value="<?= isset($currentEmp['addresses'][0]['street'])?$currentEmp['addresses'][0]['street']:'' ?>" name="address[0][street]" id="inputAddress"
-                        placeholder="Street" />
+                    <input type="text" class="form-control"
+                        value="<?= isset ($currentEmp['addresses'][0]['street']) ? $currentEmp['addresses'][0]['street'] : '' ?>"
+                        name="address[0][street]" id="inputAddress" placeholder="Street" />
                 </div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" value="<?= isset($currentEmp['addresses'][0]['building'])?$currentEmp['addresses'][0]['building']:'' ?>" name="address[0][building]" id="inputAddress2"
-                        placeholder="Building Number" />
+                    <input type="text" class="form-control"
+                        value="<?= isset ($currentEmp['addresses'][0]['building']) ? $currentEmp['addresses'][0]['building'] : '' ?>"
+                        name="address[0][building]" id="inputAddress2" placeholder="Building Number" />
                 </div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" value="<?= isset($currentEmp['addresses'][0]['region'])?$currentEmp['addresses'][0]['region']:'' ?>"  name="address[0][region]" id="inputAddress3"
-                        placeholder="Region" />
+                    <input type="text" class="form-control"
+                        value="<?= isset ($currentEmp['addresses'][0]['region']) ? $currentEmp['addresses'][0]['region'] : '' ?>"
+                        name="address[0][region]" id="inputAddress3" placeholder="Region" />
                 </div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" value="<?= isset($currentEmp['addresses'][0]['city'])?$currentEmp['addresses'][0]['city']:'' ?>" name="address[0][city]" id="inputAddress4"
-                        placeholder="City" />
+                    <input type="text" class="form-control"
+                        value="<?= isset ($currentEmp['addresses'][0]['city']) ? $currentEmp['addresses'][0]['city'] : '' ?>"
+                        name="address[0][city]" id="inputAddress4" placeholder="City" />
                 </div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" value="<?= isset($currentEmp['addresses'][0]['country'])?$currentEmp['addresses'][0]['country']:'' ?>" name="address[0][country]" id="inputAddress5"
-                        placeholder="Country" />
+                    <input type="text" class="form-control"
+                        value="<?= isset ($currentEmp['addresses'][0]['country']) ? $currentEmp['addresses'][0]['country'] : '' ?>"
+                        name="address[0][country]" id="inputAddress5" placeholder="Country" />
                 </div>
             </div>
 
             <div class="col-12 text-center mt-5 mb-3">
-                <button type="submit" name="prev" class="btn btn-outline-dark me-3" <?php echo $disablePrevButton? 'disabled': '' ?> >
+                <button type="submit" name="prev" class="btn btn-outline-dark me-3" <?php echo $disablePrevButton ? 'disabled' : '' ?>>
                     Prev
                 </button>
                 <button type="submit" name="insert" class="btn btn-success me-3">
@@ -351,7 +409,7 @@ if (isset ($_POST['insert'])) {
                 <button type="submit" name="delete" class="btn btn-danger me-3">
                     Delete
                 </button>
-                <button type="submit" name="next" class="btn btn-outline-dark me-3" <?php echo $disableButton? 'disabled': '' ?>>
+                <button type="submit" name="next" class="btn btn-outline-dark me-3" <?php echo $disableButton ? 'disabled' : '' ?>>
                     Next
                 </button>
             </div>

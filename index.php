@@ -89,7 +89,7 @@ if (isset ($_POST['insert'])) {
 <body>
 
 
-    <div class="container mt-5 card">
+    <div class="container mt-3 card">
         <?php if (isset ($_SESSION['success'])) { ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -187,6 +187,7 @@ if (isset ($_POST['insert'])) {
                 </button>
             </div>
         </form>
+        <a href="pages/displayeEmp.php" class="btn btn-outline-primary mt-1 w-50 m-auto"> Display Employees </a>
     </div>
 
 

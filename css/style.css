@@ -5,3 +5,17 @@
     padding: 20px 20px !important;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
 }
+
+.table-responsive {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid black;
+}
+
+tr {
+    border: 1px solid black;
+}
+
+th {
+    border: 1px solid black;
+}
+

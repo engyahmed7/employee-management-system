@@ -150,10 +150,14 @@ function prevRecord()
 
     $array_size = count($allEmployees);
 
-    if ($array_size > 0 && $_SESSION['i'] > 0) {
+    if ($array_size > 0 && $_SESSION['i'] > -1) {
         $i = $_SESSION['i'];
-        $_SESSION['i']--;
         $currentEmp = $allEmployees[$i];
+        $_SESSION['i']--;
+        if($_SESSION['i'] === -1){
+            $_SESSION['i'] = 0;
+            $disablePrevButton = true;
+        }
         return $currentEmp;
     } else {
         $disablePrevButton = true;

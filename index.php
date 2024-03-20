@@ -11,53 +11,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $oldname = isset ($_POST['oldname']) ? $_POST['oldname'] : '';
 
-    function initDOM()
-    {
-        global $xml;
-        $xml = new DOMDocument("1.0", "UTF-8");
-        $xml->load('data/employees.xml');
-        return $xml->documentElement;
-    }
-
-    function insertEmp($name, $email, $phones, $addresses)
-    {
-        global $xml;
-        $root = initDOM();
-
-        $employee = $xml->createElement("employee");
-        $employee->appendChild($xml->createElement("name", $name));
-        $employee->appendChild($xml->createElement("email", $email));
-
-        $phonesElement = $xml->createElement("phones");
-        foreach ($phones as $phone) {
-            $phoneElement = $xml->createElement("phone", $phone['number']);
-            $phoneElement->setAttribute("Type", $phone['type']);
-            $phonesElement->appendChild($phoneElement);
-        }
-        $employee->appendChild($phonesElement);
-
-        $addressesElement = $xml->createElement("addresses");
-        foreach ($addresses as $address) {
-            $addressElement = $xml->createElement("address");
-            $addressElement->appendChild($xml->createElement("Street", $address['street']));
-            $addressElement->appendChild($xml->createElement("BuildingNumber", $address['building']));
-            $addressElement->appendChild($xml->createElement("Region", $address['region']));
-            $addressElement->appendChild($xml->createElement("City", $address['city']));
-            $addressElement->appendChild($xml->createElement("Country", $address['country']));
-            $addressesElement->appendChild($addressElement);
-        }
-        $employee->appendChild($addressesElement);
-
-        $root->appendChild($employee);
-        $xml->save('data/employees.xml');
-
-        $_SESSION['success'] = 'Employee added successfully';
-        header('Location: index.php');
-        exit;
-    }
-
+    
 }
 
+function initDOM()
+{
+    global $xml;
+    $xml = new DOMDocument("1.0", "UTF-8");
+    $xml->load('data/employees.xml');
+    return $xml->documentElement;
+}
+
+function insertEmp($name, $email, $phones, $addresses)
+{
+    global $xml;
+    $root = initDOM();
+
+    $employee = $xml->createElement("employee");
+    $employee->appendChild($xml->createElement("name", $name));
+    $employee->appendChild($xml->createElement("email", $email));
+
+    $phonesElement = $xml->createElement("phones");
+    foreach ($phones as $phone) {
+        $phoneElement = $xml->createElement("phone", $phone['number']);
+        $phoneElement->setAttribute("Type", $phone['type']);
+        $phonesElement->appendChild($phoneElement);
+    }
+    $employee->appendChild($phonesElement);
+
+    $addressesElement = $xml->createElement("addresses");
+    foreach ($addresses as $address) {
+        $addressElement = $xml->createElement("address");
+        $addressElement->appendChild($xml->createElement("Street", $address['street']));
+        $addressElement->appendChild($xml->createElement("BuildingNumber", $address['building']));
+        $addressElement->appendChild($xml->createElement("Region", $address['region']));
+        $addressElement->appendChild($xml->createElement("City", $address['city']));
+        $addressElement->appendChild($xml->createElement("Country", $address['country']));
+        $addressesElement->appendChild($addressElement);
+    }
+    $employee->appendChild($addressesElement);
+
+    $root->appendChild($employee);
+    $xml->save('data/employees.xml');
+
+    $_SESSION['success'] = 'Employee added successfully';
+    header('Location: index.php');
+    exit;
+}
 $disableButton = false;
 $disablePrevButton = false;
 
@@ -235,6 +235,61 @@ function updateEmployee($oldname, $name, $email, $phones, $addresses)
     exit;
 }
 
+function deleteEmployee($name)
+{
+    $xml = new DOMDocument("1.0", "UTF-8");
+    $xml->load('data/employees.xml');
+    $root = $xml->documentElement;
+
+    $allEmployees = getAllEmps();
+    $indexToDelete = -1;
+    foreach ($allEmployees as $index => $employee) {
+        if ($employee['name'] === $name) {
+            $indexToDelete = $index;
+            break;
+        }
+    }
+
+    if ($indexToDelete !== -1) {
+        unset($allEmployees[$indexToDelete]);
+    }
+
+    $newXml = new DOMDocument("1.0", "UTF-8");
+    $newXml->appendChild($newXml->createElement("employees"));
+
+    foreach ($allEmployees as $employee) {
+        $employeeElement = $newXml->createElement("employee");
+        $employeeElement->appendChild($newXml->createElement("name", $employee['name']));
+        $employeeElement->appendChild($newXml->createElement("email", $employee['email']));
+
+        $phonesElement = $newXml->createElement("phones");
+        foreach ($employee['phones'] as $phone) {
+            $phoneElement = $newXml->createElement("phone", $phone['number']);
+            $phoneElement->setAttribute("Type", $phone['type']);
+            $phonesElement->appendChild($phoneElement);
+        }
+        $employeeElement->appendChild($phonesElement);
+
+        $addressesElement = $newXml->createElement("addresses");
+        foreach ($employee['addresses'] as $address) {
+            $addressElement = $newXml->createElement("address");
+            $addressElement->appendChild($newXml->createElement("Street", $address['street']));
+            $addressElement->appendChild($newXml->createElement("BuildingNumber", $address['building']));
+            $addressElement->appendChild($newXml->createElement("Region", $address['region']));
+            $addressElement->appendChild($newXml->createElement("City", $address['city']));
+            $addressElement->appendChild($newXml->createElement("Country", $address['country']));
+            $addressesElement->appendChild($addressElement);
+        }
+        $employeeElement->appendChild($addressesElement);
+
+        $newXml->documentElement->appendChild($employeeElement);
+    }
+
+    $newXml->save('data/employees.xml');
+    $_SESSION['success'] = 'Employee deleted sucessfully';
+
+}
+
 
 
 
@@ -245,6 +300,26 @@ function checkEmpty($name, $email, $phones, $addresses)
         return true;
     }
     return false;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $searchRes = isset($_GET['search']) ? $_GET['search']:'';
+    
+}
+
+function search(){
+    global $searchRes;
+    $root = initDOM();
+
+    $allEmployees = getAllEmps();
+    $searchedEmp=[];
+    foreach ($allEmployees as $emp) {
+        if($emp['name'] === $searchRes){
+            $searchedEmp=$emp;
+        }  
+    }
+    // print_r($searchedEmp);
+    return $searchedEmp;
 }
 
 
@@ -259,21 +334,19 @@ if (isset ($_POST['insert'])) {
 } elseif (isset ($_POST['next'])) {
     nextRecord();
 } elseif (isset ($_POST['update'])) {
-    // if (!empty($currentEmp)) {
     if (checkEmpty($name, $email, $phones, $addresses)) {
         header('Location: index.php');
         exit;
     }
     updateEmployee($oldname, $name, $email, $phones, $addresses);
-    // } 
-    // else {
-    //     $_SESSION['error'] = 'No employee selected for update';
-    //     header('Location: index.php');
-    //     exit;
-    // }
 } elseif (isset ($_POST['delete'])) {
-    // deleteEmployee($currentEmp['name']);
+    deleteEmployee($name);
+}elseif(isset($_GET['searchBtn'])){
+    search();
 }
+
+
+
 ?>
 
 <!DOCTYPE html>
@@ -315,11 +388,33 @@ if (isset ($_POST['insert'])) {
             <?php unset($_SESSION['error']); ?>
         <?php } ?>
 
+        <?php  if($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['searchBtn'])){
+            $searchedEmp = search();
+            if(count($searchedEmp) > 0){
+                $currentEmp = $searchedEmp;
+            }else{
+                echo "<div class='alert alert-danger alert-dismissible fade show' role='alert'>
+                <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+                <strong>Employee not found</strong>
+            </div>";
+            }
+        }
+        ?>
 
-        <h1 class="display-4 mb-5 text-center">Employees</h1>
+        <h1 class="display-4 mb-2 text-center">Employees</h1>
+        <form class="row g-3 m-auto" method="get" >
+            <div class="col-10">
+                <input type='text' name='search' class="form-control" />
+            </div>
+            <div class="col-2">
+                <button type="submit" name="searchBtn" class="btn btn-outline-success me-3">
+                        search
+                </button>
+                
+            </div>
+        </form>
         <form class="row g-3" method="post">
-            <input type="hidden" name="oldname"
-                value="<?= isset ($currentEmp['name']) ? htmlspecialchars($currentEmp['name']) : '' ?>">
+            <input type="hidden" name="oldname" value="<?= isset ($currentEmp['name']) ? htmlspecialchars($currentEmp['name']) : '' ?>">
             <!-- name -->
             <div class="col-md-12">
                 <label for="inputName4" class="form-label">Name</label>
